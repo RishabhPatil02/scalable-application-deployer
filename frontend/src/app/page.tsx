@@ -1,62 +1,65 @@
+"use client"
 import {useState, useEffect, useCallback} from 'react'
-import Nav from '../components/Nav'
+import Nav from './components/Nav'
 import axios from 'axios';
 import { io } from "socket.io-client";
+
 
 
 const backend_url = 'http://localhost:9000'
 const socket = io("http://localhost:9002");
 
-function Home() {
+export default function Home() {
 
-    const [textUrl, setTextUrl] = useState('');
-    const [hostedUrl, setHostedUrl] = useState('');
-    const [logs, setLogs] = useState<string[]>([]);
-    const [slug, setSlug] = useState('');
+  
+  const [textUrl, setTextUrl] = useState('');
+  const [hostedUrl, setHostedUrl] = useState('');
+  const [logs, setLogs] = useState<string[]>([]);
+  const [slug, setSlug] = useState('');
 
-    const handleSubmit = async (e:any) => {
-        e.preventDefault()
-        await axios.post(
-            `${backend_url}/project`,
-            {
-                gitURL:textUrl,
-                slug: slug
-            }
-        )
-        .then((response) => {
-            setHostedUrl(response.data.data.url);
-            console.log(`Subscribing to logs:${slug}`);
-            socket.emit("subscribe", `logs:${slug}`);
-        })
-        .catch((error) => {
-            console.log(error);
-        })
-    }
-
-
-    const handleSocketIncommingMessage = useCallback((message: string) => {
-        console.log(`[Incomming Socket Message]:`, typeof message, message);
-        const { log } = JSON.parse(message);
-        let arr:string[] = logs;
-        if(arr.length>13){
-            let element = arr.shift();
+  const handleSubmit = async (e:any) => {
+    e.preventDefault()
+    await axios.post(
+        `${backend_url}/project`,
+        {
+            gitURL:textUrl,
+            slug: slug
         }
-        arr.push(log);
-        console.log(arr);
-        setLogs([...arr]);
-    }, []);
+    )
+    .then((response) => {
+        setHostedUrl(response.data.data.url);
+        console.log(`Subscribing to logs:${slug}`);
+        socket.emit("subscribe", `logs:${slug}`);
+    })
+    .catch((error) => {
+        console.log(error);
+    })
+  }
 
-    useEffect(() => {
-        socket.on("message", handleSocketIncommingMessage);
-    
-        return () => {
-          socket.off("message", handleSocketIncommingMessage);
-        };
-    }, [handleSocketIncommingMessage]);
-    
-    useEffect(() => {
-        console.log(logs);
-    }, [logs]);
+  const handleSocketIncommingMessage = useCallback((message: string) => {
+    console.log(`[Incomming Socket Message]:`, typeof message, message);
+    const { log } = JSON.parse(message);
+    let arr:string[] = logs;
+    if(arr.length>13){
+        let element = arr.shift();
+    }
+    arr.push(log);
+    console.log(arr);
+    setLogs([...arr]);
+  }, []);
+
+  useEffect(() => {
+      socket.on("message", handleSocketIncommingMessage);
+
+      return () => {
+        socket.off("message", handleSocketIncommingMessage);
+      };
+  }, [handleSocketIncommingMessage]);
+
+  useEffect(() => {
+      console.log(logs);
+  }, [logs]);
+
 
   return (
     <div className='h-screen flex flex-col'>
@@ -111,5 +114,3 @@ function Home() {
     </div>
   )
 }
-
-export default Home
